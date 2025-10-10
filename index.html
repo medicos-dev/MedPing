@@ -1,0 +1,1815 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MedPing - Smart Medicine Reminder</title>
+    <link rel="icon" type="image/png" href="assets/images/appicon.png">
+    <link rel="shortcut icon" type="image/png" href="assets/images/appicon.png">
+    <link rel="apple-touch-icon" href="assets/images/appicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0d1117;
+            --card: #111827;
+            --text: #e5e7eb;
+            --muted: #94a3b8;
+            --primary: #10b981;
+            --accent: #22d3ee;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --ok: #22c55e;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+            line-height: 1.5;
+            scroll-behavior: smooth;
+            -ms-overflow-style: none;
+            /* IE/Edge hide scrollbar */
+            scrollbar-width: none;
+            /* Firefox hide scrollbar */
+        }
+
+        body::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* Chrome/Safari hide scrollbar */
+
+        /* Hide all scrollbars globally */
+        * {
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        *::-webkit-scrollbar {
+            display: none;
+        }
+
+        html {
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        html::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* Keep page scrollbar visible; gallery scrollbar is hidden separately */
+        .deck {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px 24px 80px;
+        }
+
+        .slide {
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0));
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 28px;
+            margin: 18px 0 28px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+            opacity: 0;
+            transform: translateY(14px) scale(0.992);
+            transition: opacity 500ms ease, transform 600ms cubic-bezier(.2, .8, .2, 1);
+        }
+
+        .slide.active {
+            opacity: 1;
+            transform: none;
+        }
+
+        .slide .reveal>li {
+            opacity: 0;
+            transform: translateY(8px);
+            transition: opacity 450ms ease, transform 450ms ease;
+        }
+
+        .slide.active .reveal>li {
+            opacity: 1;
+            transform: none;
+        }
+
+        .slide.active .reveal>li:nth-child(1) {
+            transition-delay: 80ms;
+        }
+
+        .slide.active .reveal>li:nth-child(2) {
+            transition-delay: 140ms;
+        }
+
+        .slide.active .reveal>li:nth-child(3) {
+            transition-delay: 200ms;
+        }
+
+        .slide.active .reveal>li:nth-child(4) {
+            transition-delay: 260ms;
+        }
+
+        .slide.active .reveal>li:nth-child(5) {
+            transition-delay: 320ms;
+        }
+
+        .slide.active .reveal>li:nth-child(6) {
+            transition-delay: 380ms;
+        }
+
+        .topbar {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            backdrop-filter: blur(8px);
+            background: linear-gradient(180deg, rgba(13, 17, 23, 0.92), rgba(13, 17, 23, 0.60));
+            border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+        }
+
+        .topbar-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 18px 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .spacer {
+            flex: 1;
+        }
+
+        .controls button {
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--text);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 10px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-family: Inter;
+        }
+
+        .controls button:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .progress {
+            height: 4px;
+            width: 100%;
+            position: relative;
+            z-index: 1001;
+            display: block;
+            background: transparent;
+        }
+
+        .progress-track {
+            height: 100%;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 2px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg,
+                    #22d3ee 0%,
+                    #10b981 50%,
+                    #22d3ee 100%);
+            background-size: 200% 100%;
+            border-radius: 2px;
+            position: relative;
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            animation: progressShimmer 2s ease-in-out infinite;
+        }
+
+        .progress-glow {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg,
+                    rgba(34, 211, 238, 0.8) 0%,
+                    rgba(16, 185, 129, 0.6) 50%,
+                    rgba(34, 211, 238, 0.8) 100%);
+            border-radius: 2px;
+            filter: blur(2px);
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1;
+        }
+
+        .progress-pulse {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg,
+                    transparent 0%,
+                    rgba(34, 211, 238, 0.4) 50%,
+                    transparent 100%);
+            border-radius: 2px;
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            animation: progressPulse 1.5s ease-in-out infinite;
+            z-index: 2;
+        }
+
+        @keyframes progressShimmer {
+            0% {
+                background-position: -200% 0;
+            }
+
+            100% {
+                background-position: 200% 0;
+            }
+        }
+
+        @keyframes progressPulse {
+
+            0%,
+            100% {
+                opacity: 0.6;
+            }
+
+            50% {
+                opacity: 1;
+            }
+        }
+
+        .animate-stroke {
+            stroke-dasharray: 0 1000;
+            animation: draw 1.2s ease forwards;
+        }
+
+        @keyframes draw {
+            to {
+                stroke-dasharray: 1000 0;
+            }
+        }
+
+        .pulse {
+            animation: pulse 2.4s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.02);
+            }
+        }
+
+        .lightbox {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 4000;
+        }
+
+        .lightbox.open {
+            display: flex;
+        }
+
+        .lightbox img {
+            max-width: 92vw;
+            max-height: 92vh;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .lightbox.open img {
+            animation: macOpen 420ms cubic-bezier(.2, 1, .2, 1);
+        }
+
+        @keyframes macOpen {
+            0% {
+                transform: translateY(28px) scale(0.94);
+                opacity: .0;
+            }
+
+            60% {
+                transform: translateY(-6px) scale(1.02);
+                opacity: 1;
+            }
+
+            100% {
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .lightbox .close {
+            position: fixed;
+            top: 18px;
+            right: 18px;
+            color: #fff;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            border-radius: 999px;
+            padding: 8px 12px;
+            cursor: pointer;
+            z-index: 4001;
+        }
+
+        .photo-card {
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0));
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 14px;
+            padding: 12px;
+            transition: transform 280ms ease, box-shadow 280ms ease, border-color 280ms ease;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+        }
+
+        .photo-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(34, 211, 238, 0.35);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+        }
+
+        .photo-card .img {
+            border-radius: 10px;
+        }
+
+        .title {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 12px;
+        }
+
+        .app-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--accent), var(--primary));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(34, 211, 238, 0.3);
+        }
+
+        h1 {
+            font-size: 36px;
+            margin: 0;
+            letter-spacing: 0.2px;
+            font-family: Poppins, Inter, system-ui;
+            font-weight: 700;
+        }
+
+        h2 {
+            font-size: 24px;
+            margin: 0 0 14px;
+            color: var(--accent);
+            font-family: Poppins, Inter, system-ui;
+            font-weight: 600;
+        }
+
+        p {
+            margin: 8px 0 12px;
+            color: var(--text);
+        }
+
+        ul {
+            margin: 8px 0 0 18px;
+        }
+
+        li {
+            margin: 6px 0;
+        }
+
+        .grid {
+            display: grid;
+            gap: 16px;
+        }
+
+        .grid.cols-2 {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .grid.cols-3 {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        /* Horizontal gallery */
+        .hscroll {
+            display: flex;
+            gap: 16px;
+            overflow-x: auto;
+            overflow-y: hidden;
+            scroll-snap-type: x mandatory;
+            padding-bottom: 6px;
+            overscroll-behavior: contain;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        .hscroll.animating {
+            scroll-snap-type: none;
+        }
+
+        .hscroll::-webkit-scrollbar {
+            display: none;
+        }
+
+        .hitem {
+            scroll-snap-align: start;
+            flex: 0 0 calc((100% - 32px) / 3);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 6px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            background: rgba(34, 211, 238, 0.12);
+            color: var(--accent);
+            border: 1px solid rgba(34, 211, 238, 0.35);
+        }
+
+        .note {
+            color: var(--muted);
+            font-size: 14px;
+            margin-top: 6px;
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 12px;
+            padding: 14px;
+        }
+
+        .hero {
+            background: radial-gradient(1200px 400px at 30% -20%, rgba(34, 211, 238, 0.15), rgba(0, 0, 0, 0)), radial-gradient(1000px 400px at 80% -30%, rgba(16, 185, 129, 0.15), rgba(0, 0, 0, 0));
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .kpi {
+            display: flex;
+            gap: 14px;
+            align-items: center;
+        }
+
+        .kpi .num {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .muted {
+            color: var(--muted);
+        }
+
+        .img {
+            width: 100%;
+            border-radius: 12px;
+            display: block;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: #0b0f14;
+        }
+
+        .thumb {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            background: #0b0f14;
+        }
+
+        figure {
+            margin: 0;
+        }
+
+        figcaption {
+            color: var(--muted);
+            font-size: 13px;
+            margin-top: 6px;
+            text-align: center;
+        }
+
+        .thumb-caption {
+            color: var(--muted);
+            font-size: 12px;
+            margin-top: 6px;
+            text-align: left;
+        }
+
+        .footer {
+            text-align: center;
+            color: var(--muted);
+            margin-top: 16px;
+            margin-bottom: 16px;
+            font-size: 13px;
+        }
+
+        /* Back to Top Button */
+        .back-to-top {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--accent), var(--primary));
+            border: none;
+            border-radius: 50%;
+            color: white;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 20px rgba(34, 211, 238, 0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1000;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        /* Mobile: Lift back-to-top button higher */
+        @media (max-width: 768px) {
+            .back-to-top {
+                bottom: 80px;
+                right: 20px;
+                width: 52px;
+                height: 52px;
+            }
+        }
+
+        .back-to-top.visible {
+            display: flex;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .back-to-top:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(34, 211, 238, 0.4);
+        }
+
+        .back-to-top:active {
+            transform: translateY(0);
+        }
+
+        .pill {
+            display: inline-block;
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: rgba(16, 185, 129, 0.12);
+            border: 1px solid rgba(16, 185, 129, 0.35);
+            color: var(--text);
+            font-size: 13px;
+        }
+
+        .timeline {
+            display: grid;
+            grid-template-columns: 120px 1fr;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .t-time {
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .t-event {
+            background: var(--card);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            padding: 10px 12px;
+            border-radius: 10px;
+        }
+
+        .legend {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 8px;
+        }
+
+        .legend span {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--muted);
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .chart {
+            width: 100%;
+            height: 260px;
+            background: var(--card);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .bar {
+            transform: scaleY(0);
+            transform-origin: bottom;
+            transition: transform 700ms cubic-bezier(.2, .8, .2, 1);
+        }
+
+        .slide.active .bar {
+            transform: scaleY(1);
+        }
+
+        .small {
+            font-size: 13px;
+        }
+
+        @media (max-width: 900px) {
+
+            .grid.cols-2,
+            .grid.cols-3 {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Mobile tweaks: single-image wide gallery with taller previews */
+        @media (max-width: 768px) {
+            .hitem {
+                flex: 0 0 88%;
+            }
+
+            .thumb {
+                height: 60vh;
+                object-fit: contain;
+            }
+
+            .deck {
+                padding-left: 16px;
+                padding-right: 16px;
+            }
+
+            /* Mobile: First section improvements */
+            .slide.hero {
+                padding: 24px;
+                margin: 12px 0 20px;
+            }
+
+            .slide.hero .title {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 20px;
+                text-align: left;
+            }
+
+            .slide.hero h1 {
+                font-size: 28px;
+                line-height: 1.3;
+                margin-bottom: 8px;
+            }
+
+            .slide.hero .badge {
+                font-size: 14px;
+                padding: 8px 12px;
+            }
+
+            /* Mobile: App icon bigger */
+            .app-icon {
+                width: 64px;
+                height: 64px;
+                border-radius: 14px;
+            }
+
+            .app-icon img {
+                width: 56px !important;
+                height: 56px !important;
+                border-radius: 10px !important;
+            }
+
+            /* Mobile: Developer section improvements */
+            .slide:has(h2:contains("Developer Credits")) {
+                padding: 20px;
+                margin: 12px 0 20px;
+            }
+
+            .slide:has(h2:contains("Developer Credits")) h2 {
+                font-size: 24px;
+                margin-bottom: 20px;
+                text-align: center;
+            }
+
+            .slide:has(h2:contains("Developer Credits")) .grid.cols-2 {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .slide:has(h2:contains("Developer Credits")) .card {
+                padding: 20px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+                gap: 16px;
+                margin: 0;
+            }
+
+            .slide:has(h2:contains("Developer Credits")) .card img {
+                width: 120px !important;
+                height: 120px !important;
+                border-radius: 12px !important;
+                object-fit: cover !important;
+                margin: 0 auto 16px auto;
+                order: 1;
+            }
+
+            .slide:has(h2:contains("Developer Credits")) h3 {
+                font-size: 20px;
+                margin: 0 0 8px 0;
+                font-weight: 600;
+                order: 2;
+            }
+
+            .slide:has(h2:contains("Developer Credits")) p {
+                font-size: 14px;
+                line-height: 1.5;
+                margin: 4px 0;
+                order: 3;
+            }
+
+            .slide:has(h2:contains("Developer Credits")) ul {
+                text-align: left;
+                margin: 12px 0;
+                padding-left: 16px;
+                order: 4;
+            }
+
+            .slide:has(h2:contains("Developer Credits")) li {
+                font-size: 13px;
+                margin: 6px 0;
+                line-height: 1.4;
+            }
+        }
+
+        /* Force 88% donut chart - override any other values */
+        #donut #value {
+            stroke-dasharray: 475.2 64.8 !important;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="topbar">
+        <div class="topbar-inner">
+            <div class="badge">MedPing</div>
+            <div class="spacer"></div>
+        </div>
+        <div class="progress">
+            <div class="progress-track">
+                <div class="progress-fill" id="progressBar"></div>
+                <div class="progress-glow" id="progressGlow"></div>
+                <div class="progress-pulse" id="progressPulse"></div>
+            </div>
+        </div>
+    </div>
+    <main class="deck" id="deck">
+        <section class="slide hero">
+            <div class="title">
+                <!-- App Icon -->
+                <div class="app-icon">
+                    <img src="assets/images/appicon.png" alt="MedPing App Icon"
+                        style="width: 48px; height: 48px; border-radius: 8px; object-fit: cover;" />
+                </div>
+                <div>
+                    <h1>MedPing — Smart Medicine Reminder</h1>
+                    <div class="badge">Version 1.0.0 · Offline Voice · Lock‑screen Alarm</div>
+                </div>
+            </div>
+            <p>Never miss a dose. MedPing wakes your phone at the exact time, plays your chosen alarm, and speaks a
+                clear instruction: “It’s time to take &lt;Medicine&gt;. Please take your
+                &lt;pill/tablet/syringe/syrup&gt;.” Works even offline. Designed for patients, caregivers, and seniors
+                worldwide.</p>
+            <div class="grid cols-3">
+                <div class="card kpi">
+                    <div class="num">00s</div>
+                    <div>
+                        <div>Starts exactly on time</div>
+                        <div class="muted small">Aggressive lock‑screen wake</div>
+                    </div>
+                </div>
+                <div class="card kpi">
+                    <div class="num">4×</div>
+                    <div>
+                        <div>Voice prompts per alarm</div>
+                        <div class="muted small">At 6s, 20s, 35s, 50s</div>
+                    </div>
+                </div>
+                <div class="card kpi">
+                    <div class="num">100%→20%</div>
+                    <div>
+                        <div>Smart volume ducking</div>
+                        <div class="muted small">Clear voice over alarm</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <h2>Who MedPing Helps</h2>
+            <div class="grid cols-3">
+                <div class="card">
+                    <span class="pill">Patients</span>
+                    <p>Stay on schedule with timely, spoken reminders that are easy to follow.</p>
+                </div>
+                <div class="card">
+                    <span class="pill">Caregivers</span>
+                    <p>Confidence that reminders alert loudly and clearly, even if the phone is locked.</p>
+                </div>
+                <div class="card">
+                    <span class="pill">Seniors</span>
+                    <p>Hands‑free guidance with readable screens and strong audio cues.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <h2>Core Benefits</h2>
+            <ul class="reveal">
+                <li>Exact‑time alarms that appear over the lock screen.</li>
+                <li>Clear, confident voice in your phone’s language.</li>
+                <li>Offline‑friendly — voice prepared and cached on device.</li>
+                <li>Custom alarm sounds, optional vibration, and notification controls.</li>
+                <li>Simple, high‑contrast design for easy use.</li>
+            </ul>
+        </section>
+
+        <section class="slide">
+            <h2>Global Medication Adherence — Why This Matters</h2>
+            <div class="grid cols-2">
+                <div>
+                    <ul class="reveal">
+                        <li><strong>Non‑adherence is widespread:</strong> WHO estimates only ~50% adherence to long‑term
+                            therapies in developed countries.</li>
+                        <li><strong>Health impact:</strong> Missed or late doses worsen control of chronic diseases
+                            (e.g., hypertension, diabetes), increasing complications.</li>
+                        <li><strong>Healthcare burden:</strong> In the U.S., non‑adherence is associated with ~10% of
+                            hospitalizations and substantial avoidable costs annually.</li>
+                        <li><strong>Common causes:</strong> forgetfulness, complex regimens, side‑effects, low health
+                            literacy, and lack of timely prompts.</li>
+                    </ul>
+                    <p class="note small">Sources: World Health Organization (Adherence to Long‑Term Therapies), CDC,
+                        peer‑reviewed adherence studies. Actual figures vary by region and condition.</p>
+                </div>
+                <div class="card chart">
+                    <!-- Inline SVG stacked line to depict missed/late vs on‑time -->
+                    <svg viewBox="0 0 420 220" width="100%" height="100%"
+                        aria-label="On-time vs missed/late doses (illustrative)">
+                        <defs>
+                            <linearGradient id="on" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stop-color="#10b981" />
+                                <stop offset="100%" stop-color="#059669" />
+                            </linearGradient>
+                            <linearGradient id="late" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stop-color="#f59e0b" />
+                                <stop offset="100%" stop-color="#d97706" />
+                            </linearGradient>
+                            <linearGradient id="miss" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stop-color="#ef4444" />
+                                <stop offset="100%" stop-color="#b91c1c" />
+                            </linearGradient>
+                        </defs>
+                        <rect x="0" y="0" width="420" height="220" fill="none" />
+                        <text x="16" y="24" fill="#94a3b8" font-size="14">Illustrative adherence mix over a month</text>
+                        <!-- Axis -->
+                        <line x1="40" y1="180" x2="400" y2="180" stroke="#374151" stroke-width="1" />
+                        <line x1="40" y1="40" x2="40" y2="180" stroke="#374151" stroke-width="1" />
+                        <!-- Areas -->
+                        <path d="M40 140 C 120 120, 180 110, 240 100 C 300 95, 360 90, 400 88 L 400 180 L 40 180 Z"
+                            fill="url(#on)" opacity="0.9" />
+                        <path d="M40 160 C 120 150, 180 148, 240 145 C 300 143, 360 142, 400 140 L 400 180 L 40 180 Z"
+                            fill="url(#late)" opacity="0.85" />
+                        <path d="M40 175 C 120 175, 180 174, 240 173 C 300 172, 360 171, 400 171 L 400 180 L 40 180 Z"
+                            fill="url(#miss)" opacity="0.8" />
+                        <g>
+                            <rect x="320" y="8" width="10" height="10" fill="url(#on)" /><text x="336" y="17"
+                                fill="#e5e7eb" font-size="12">On‑time</text>
+                            <rect x="320" y="26" width="10" height="10" fill="url(#late)" /><text x="336" y="35"
+                                fill="#e5e7eb" font-size="12">Late</text>
+                            <rect x="320" y="44" width="10" height="10" fill="url(#miss)" /><text x="336" y="53"
+                                fill="#e5e7eb" font-size="12">Missed</text>
+                        </g>
+                    </svg>
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <h2>How an Alarm Minute Sounds</h2>
+            <div class="timeline">
+                <div class="t-time">0s</div>
+                <div class="t-event">Alarm starts at full volume (100%).</div>
+                <div class="t-time">6s</div>
+                <div class="t-event">Voice #1 plays; alarm ducks to 20%, then returns to 100%.</div>
+                <div class="t-time">20s</div>
+                <div class="t-event">Voice #2 plays; duck to 20%, then restore to 100%.</div>
+                <div class="t-time">35s</div>
+                <div class="t-event">Voice #3 plays; duck to 20%, then restore to 100%.</div>
+                <div class="t-time">50s</div>
+                <div class="t-event">Voice #4 plays; duck to 20%, then restore to 100%.</div>
+                <div class="t-time">60s</div>
+                <div class="t-event">Auto‑stop safeguard (if not dismissed).</div>
+            </div>
+            <div class="legend">
+                <span><span class="dot" style="background: var(--primary);"></span> Alarm at 100%</span>
+                <span><span class="dot" style="background: var(--warning);"></span> Alarm ducked to 20% during
+                    voice</span>
+            </div>
+        </section>
+
+        <section class="slide">
+            <h2>Illustrative Impact</h2>
+            <div class="grid cols-2">
+                <div class="card chart">
+                    <!-- Inline SVG bar chart: adherence with/without voice reminders -->
+                    <svg viewBox="0 0 420 220" width="100%" height="100%" aria-label="Adherence chart">
+                        <defs>
+                            <linearGradient id="bar1" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stop-color="#22d3ee" />
+                                <stop offset="100%" stop-color="#0ea5e9" />
+                            </linearGradient>
+                            <linearGradient id="bar2" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stop-color="#10b981" />
+                                <stop offset="100%" stop-color="#059669" />
+                            </linearGradient>
+                        </defs>
+                        <rect x="0" y="0" width="420" height="220" fill="none" />
+                        <text x="16" y="24" fill="#94a3b8" font-size="14">Illustrative adherence (higher is
+                            better)</text>
+                        <!-- Axes -->
+                        <line x1="40" y1="180" x2="400" y2="180" stroke="#374151" stroke-width="1" />
+                        <line x1="40" y1="40" x2="40" y2="180" stroke="#374151" stroke-width="1" />
+                        <text x="32" y="185" fill="#94a3b8" font-size="12">0%</text>
+                        <text x="24" y="100" fill="#94a3b8" font-size="12">50%</text>
+                        <text x="20" y="45" fill="#94a3b8" font-size="12">100%</text>
+                        <!-- Bars -->
+                        <rect class="bar" x="90" y="110" width="80" height="70" rx="6" fill="url(#bar1)" />
+                        <text x="130" y="195" text-anchor="middle" fill="#e5e7eb" font-size="12">Without voice</text>
+                        <rect class="bar" x="250" y="70" width="80" height="110" rx="6" fill="url(#bar2)" />
+                        <text x="290" y="195" text-anchor="middle" fill="#e5e7eb" font-size="12">With MedPing</text>
+                    </svg>
+                </div>
+                <div class="card chart" id="donutCard">
+                    <svg id="donut" viewBox="0 0 240 240" width="100%" height="100%"
+                        aria-label="User satisfaction donut" data-percent="88" data-fixed="88">
+                        <defs>
+                            <linearGradient id="d1" x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0%" stop-color="#22d3ee" />
+                                <stop offset="100%" stop-color="#10b981" />
+                            </linearGradient>
+                        </defs>
+                        <circle cx="120" cy="120" r="86" fill="#0f172a" />
+                        <circle id="track" cx="120" cy="120" r="86" fill="none" stroke="#1f2937" stroke-width="26" />
+                        <circle id="value" cx="120" cy="120" r="86" fill="none" stroke="url(#d1)" stroke-width="26"
+                            stroke-linecap="round" transform="rotate(-90 120 120)" />
+                        <text id="donutLabel" x="120" y="114" text-anchor="middle" fill="#e5e7eb" font-size="18">User
+                            satisfaction</text>
+                        <text id="donutPct" x="120" y="140" text-anchor="middle" fill="#22d3ee" font-size="22"
+                            font-weight="700">88%</text>
+                    </svg>
+                </div>
+            </div>
+            <div class="note">Charts are illustrative for presentation; actual outcomes depend on adherence context.
+            </div>
+        </section>
+
+        <section class="slide">
+            <h2>What You Control</h2>
+            <ul>
+                <li>Choose your alarm sound from curated options.</li>
+                <li>Vibration on or off.</li>
+                <li>Post‑alarm and missed reminder notifications on or off.</li>
+                <li>Language follows your device automatically.</li>
+            </ul>
+        </section>
+
+        <section class="slide">
+            <h2>Simple Steps</h2>
+            <ol>
+                <li>Add medicine name, type (pill/tablet/syringe/syrup), and time.</li>
+                <li>At the exact time, the alarm screen appears over the lock screen.</li>
+                <li>The app speaks the instruction 4 times within the minute.</li>
+                <li>Confirm Taken or Not Taken. Missed reminders follow your settings.</li>
+            </ol>
+        </section>
+
+        <section class="slide" id="screens">
+            <h2>App Screens — Gallery</h2>
+            <div class="hscroll" id="gallery">
+                <figure class="photo-card hitem"
+                    data-caption="Home: quick access to upcoming reminders and a clean overview.">
+                    <img class="img thumb lightboxable" src="screenshots/HOME.jpg" alt="Home screen" />
+                    <figcaption>Home</figcaption>
+                </figure>
+                <figure class="photo-card hitem"
+                    data-caption="Add Medicine: enter name, type (pill/tablet/syringe/syrup), and schedule.">
+                    <img class="img thumb lightboxable" src="screenshots/MEDICINE ADDING PAGE.jpg" alt="Add medicine" />
+                    <figcaption>Add Medicine</figcaption>
+                </figure>
+                <figure class="photo-card hitem"
+                    data-caption="Medicine Details: Detailed view showing medicine information, schedule, and management options.">
+                    <img class="img thumb lightboxable" src="screenshots/MEDICINE DETAILS PAGE.jpg"
+                        alt="Medicine details" />
+                    <figcaption>Medicine Details</figcaption>
+                </figure>
+                <figure class="photo-card hitem"
+                    data-caption="Medicine Scheduling: User interface for setting up medicine schedules with time selection.">
+                    <img class="img thumb lightboxable" src="screenshots/MEDICINE SCHEDULING BY USER.jpg"
+                        alt="Medicine scheduling" />
+                    <figcaption>Medicine Scheduling</figcaption>
+                </figure>
+                <figure class="photo-card hitem"
+                    data-caption="Exact Time Scheduling: Precise time selection interface for setting exact medication reminder times.">
+                    <img class="img thumb lightboxable" src="screenshots/EXACT TIME SCHEDULING.jpg"
+                        alt="Exact time scheduling" />
+                    <figcaption>Exact Time Scheduling</figcaption>
+                </figure>
+                <figure class="photo-card hitem"
+                    data-caption="Alarm Screen: appears over lock screen, with clear actions.">
+                    <img class="img thumb lightboxable" src="screenshots/ALARM SCREEN RINGING.jpg" alt="Alarm screen" />
+                    <figcaption>Alarm Screen</figcaption>
+                </figure>
+                <figure class="photo-card hitem"
+                    data-caption="Success Screen: Confirmation screen after successfully adding a new medicine with next steps.">
+                    <img class="img thumb lightboxable" src="screenshots/SUCCESS SCREEN.jpg" alt="Success screen" />
+                    <figcaption>Success Screen</figcaption>
+                </figure>
+                <figure class="photo-card hitem"
+                    data-caption="Medicine Added Home: Updated home screen showing the newly added medicine in the list.">
+                    <img class="img thumb lightboxable" src="screenshots/MEDICINE ADDED HOME SCREEN.jpg"
+                        alt="Medicine added home" />
+                    <figcaption>Medicine Added Home</figcaption>
+                </figure>
+                <figure class="photo-card hitem"
+                    data-caption="Settings Page 1: Comprehensive settings with voice preferences, alarm sounds, and notification controls.">
+                    <img class="img thumb lightboxable" src="screenshots/SETTINGS PAGE 1.jpg" alt="Settings page 1" />
+                    <figcaption>Settings Page 1</figcaption>
+                </figure>
+                <figure class="photo-card hitem"
+                    data-caption="Settings Page 2: Additional settings showing advanced configuration options and preferences.">
+                    <img class="img thumb lightboxable" src="screenshots/SETTING PAGE 2.jpg" alt="Settings page 2" />
+                    <figcaption>Settings Page 2</figcaption>
+                </figure>
+                <figure class="photo-card hitem"
+                    data-caption="Deleting Medicine: Interface for removing scheduled medicines with confirmation dialog.">
+                    <img class="img thumb lightboxable" src="screenshots/DELETING A SCHEDULED MEDICINE.jpg"
+                        alt="Deleting medicine" />
+                    <figcaption>Deleting Medicine</figcaption>
+                </figure>
+            </div>
+        </section>
+
+        <section class="slide">
+            <h2>Privacy & Safety</h2>
+            <ul>
+                <li>Data stays on your device — no accounts or cloud uploads.</li>
+                <li>Only basic info is stored: medicine names, times, and preferences.</li>
+                <li>MedPing supports adherence but does not replace medical advice.</li>
+            </ul>
+        </section>
+
+        <section class="slide">
+            <h2>Permissions & Tips</h2>
+            <ul>
+                <li>Notifications and alarms: to alert you at the exact time, over the lock screen.</li>
+                <li>Vibration (optional): for tactile feedback if enabled.</li>
+                <li>Allow MedPing to run without strict battery restrictions for best punctuality.</li>
+            </ul>
+        </section>
+
+        <section class="slide">
+            <h2>References</h2>
+            <ul class="small">
+                <li>World Health Organization. Adherence to Long‑Term Therapies: Evidence for Action. <span
+                        class="muted">(Overview of adherence, often ~50% in developed countries.)</span></li>
+                <li>Centers for Disease Control and Prevention (CDC). Medication Adherence resources. <span
+                        class="muted">(Health impact and hospitalization associations.)</span></li>
+                <li>Peer‑reviewed studies on chronic disease adherence trends and interventions. <span
+                        class="muted">(For condition‑specific figures and regional variations.)</span></li>
+            </ul>
+            <p class="note">These sources inform the problem context; actual outcomes vary by population and condition.
+            </p>
+        </section>
+
+        <section class="slide">
+            <h2>Developer Credits</h2>
+            <div class="grid cols-2">
+                <div class="card" style="display:flex; align-items:center; gap:16px;">
+                    <img class="img" src="assets/images/SAMRIDDHA NASKAR _page-0001 (1).jpg" alt="Developer photo"
+                        style="width:160px; height:auto; border-radius:10px;" />
+                    <div>
+                        <h3 style="margin:0 0 6px 0; font-family:Poppins;">SAM (Samriddha Naskar)</h3>
+                        <p class="muted" style="margin:0;">Design & Development · MedPing</p>
+                        <p style="margin:10px 0 0 0;">Thank you for reviewing MedPing. Built with care to improve daily
+                            adherence through clear, timely, offline-friendly reminders.</p>
+                    </div>
+                </div>
+                <div class="card">
+                    <p><strong>Contact/Attribution:</strong></p>
+                    <ul>
+                        <li>Developer: SAM · Full name: Samriddha Naskar</li>
+                        <li>Project: MedPing — Smart Medicine Reminder</li>
+                        <li>Role: End-to-end design and implementation</li>
+                    </ul>
+                    <p class="note">All screenshots are from the app’s current build; images are for demonstration
+                        purposes only.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <h2>Summary</h2>
+            <p>MedPing combines precise alarms, confident voice guidance, and offline reliability to help you stay on
+                track with medications. It’s simple, dependable, and designed for real‑life use.</p>
+        </section>
+
+        <div class="footer">MedPing · Smart Medicine Reminder · © 2025 · Developed by SAM (Samriddha Naskar)</div>
+
+        <!-- Back to Top Arrow -->
+        <button class="back-to-top" id="backToTop" aria-label="Back to top">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M7 14L12 9L17 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" />
+            </svg>
+        </button>
+    </main>
+    <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Image viewer">
+        <button class="close" id="lightboxClose">Close ✕</button>
+        <img id="lightboxImg" alt="Expanded screenshot" />
+    </div>
+
+    <script>
+        (function () {
+            const slides = Array.from(document.querySelectorAll('.slide'));
+            let index = 0;
+            const progressBar = document.getElementById('progressBar');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const gallery = document.getElementById('gallery');
+            const gallerySlide = document.getElementById('screens');
+            const isMobile = window.matchMedia('(max-width: 768px)').matches;
+            let galleryActive = false; // only true when gallery is docked under header
+            let wheelLock = false;
+            let sectionGateUntil = 0;   // time until which section navigation is locked
+            let galleryArmed = false;   // requires first scroll to arm
+            let galleryStepGateUntil = 0; // gate between horizontal steps
+            let isKeyboardNavigation = false;
+            let lastInteractionTime = 0;
+
+            function headerHeight() { return (document.querySelector('.topbar')?.getBoundingClientRect().height || 0); }
+            function scrollToSlide(i) {
+                const target = slides[i];
+                if (!target) return;
+                const gap = 12; // small space below the top bar
+                const top = target.getBoundingClientRect().top + window.pageYOffset - headerHeight() - gap;
+
+                // Check if this is a gallery-related section for smoother scrolling
+                const isGallerySection = target.id === 'screens';
+                const prevSlide = slides[i - 1];
+                const nextSlide = slides[i + 1];
+                const isFromGallery = prevSlide && prevSlide.id === 'screens';
+                const isToGallery = nextSlide && nextSlide.id === 'screens';
+
+                if (isGallerySection || isFromGallery || isToGallery) {
+                    // Smoother scrolling for gallery transitions
+                    window.scrollTo({
+                        top,
+                        behavior: 'smooth',
+                        // Use a more fluid easing
+                        block: 'start',
+                        inline: 'nearest'
+                    });
+                    // Shorter snap delay for smoother transitions
+                    setTimeout(() => {
+                        const preciseTop = target.getBoundingClientRect().top + window.pageYOffset - headerHeight() - gap;
+                        window.scrollTo({ top: preciseTop });
+                    }, 250);
+                } else {
+                    // Normal scrolling for other sections
+                    window.scrollTo({ top, behavior: 'smooth' });
+                    // Normal snap delay
+                    setTimeout(() => {
+                        const preciseTop = target.getBoundingClientRect().top + window.pageYOffset - headerHeight() - gap;
+                        window.scrollTo({ top: preciseTop });
+                    }, 350);
+                }
+            }
+
+            // Smooth horizontal scroll helper
+            function smoothScrollToX(el, targetLeft, duration) {
+                const start = el.scrollLeft;
+                const delta = targetLeft - start;
+                const startTime = performance.now();
+                function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+                function step(now) {
+                    const p = Math.min(1, (now - startTime) / duration);
+                    el.scrollLeft = start + delta * easeOutCubic(p);
+                    if (p < 1) requestAnimationFrame(step);
+                }
+                requestAnimationFrame(step);
+            }
+
+            function clamp(i) { return Math.max(0, Math.min(slides.length - 1, i)); }
+            function setActive(i) {
+                index = clamp(i);
+                slides.forEach((s, idx) => s.classList.toggle('active', idx === index));
+                scrollToSlide(index);
+                animateCharts(slides[index]);
+
+                // Check if transitioning to/from gallery section for smoother behavior
+                const currentSlide = slides[index];
+                const isGallerySection = currentSlide && currentSlide.id === 'screens';
+                const prevSlide = slides[index - 1];
+                const nextSlide = slides[index + 1];
+                const isFromGallery = prevSlide && prevSlide.id === 'screens';
+                const isToGallery = nextSlide && nextSlide.id === 'screens';
+
+                if (isGallerySection || isFromGallery || isToGallery) {
+                    // Smoother transitions for gallery-related sections
+                    sectionGateUntil = Date.now() + 600; // Shorter delay
+                    wheelLock = true;
+                    setTimeout(() => { wheelLock = false; }, 300); // Faster unlock
+                } else {
+                    // Normal timing for other sections
+                    sectionGateUntil = Date.now() + 1000;
+                    wheelLock = true;
+                    setTimeout(() => { wheelLock = false; }, 1000);
+                }
+
+                // Leaving gallery context on any section change
+                galleryActive = false; galleryArmed = false;
+                // Recompute current index/progress after scroll animation starts
+                setTimeout(updateCurrentIndexOnScroll, 10);
+                // Update progress bar immediately as a fallback
+                setTimeout(() => {
+                    updateProgressBar();
+                }, 50);
+            }
+
+            function dockGalleryAndActivate() {
+                if (!gallerySlide) return;
+                const gap = 12;
+                const desiredTop = gallerySlide.getBoundingClientRect().top + window.pageYOffset - headerHeight() - gap;
+                window.scrollTo({ top: desiredTop, behavior: 'smooth' });
+                galleryActive = true;
+                galleryArmed = false; // require first scroll to arm
+                galleryStepGateUntil = Date.now() + 1000; // small initial gate
+            }
+
+            function animateCharts(slide) {
+                if (!slide) return;
+                const svgs = slide.querySelectorAll('svg');
+                svgs.forEach(svg => {
+                    const paths = svg.querySelectorAll('path, circle');
+                    paths.forEach(p => { p.classList.add('animate-stroke'); });
+                });
+
+                // Special handling for donut chart - force 88% always
+                const donut = slide.querySelector('#donut');
+                if (donut) {
+                    const pct = 88; // Always use 88%
+                    const radius = 86;
+                    const circumference = 2 * Math.PI * radius;
+                    const value = donut.querySelector('#value');
+                    const pctText = donut.querySelector('#donutPct');
+                    if (value && pctText) {
+                        value.style.transition = 'stroke-dasharray 900ms ease';
+                        requestAnimationFrame(() => {
+                            // Calculate 88% of the circumference for the arc
+                            const dashLength = (pct / 100) * circumference;
+                            const gapLength = circumference - dashLength;
+                            value.setAttribute('stroke-dasharray', `${dashLength} ${gapLength}`);
+                            pctText.textContent = '88%';
+                        });
+                    }
+                }
+            }
+
+            // Buttons removed
+
+            // Top-bar title click -> scroll to top
+            const titleBadge = document.querySelector('.topbar .badge');
+            if (titleBadge) {
+                titleBadge.style.cursor = 'pointer';
+                titleBadge.addEventListener('click', () => {
+                    // Scroll to the first slide with header gap preserved
+                    const first = slides[0];
+                    if (first) {
+                        const gap = 12;
+                        const top = first.getBoundingClientRect().top + window.pageYOffset - headerHeight() - gap;
+                        window.scrollTo({ top, behavior: 'smooth' });
+                        setTimeout(() => {
+                            const preciseTop = first.getBoundingClientRect().top + window.pageYOffset - headerHeight() - gap;
+                            window.scrollTo({ top: preciseTop });
+                        }, 350);
+                    } else {
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }
+                });
+            }
+
+            document.addEventListener('keydown', (e) => {
+                const currentSlide = slides[index];
+                const onGallery = currentSlide && currentSlide.id === 'screens' && galleryActive;
+
+                // Set keyboard navigation mode
+                isKeyboardNavigation = true;
+                lastInteractionTime = Date.now();
+
+                // When on gallery and active, let the gallery-specific handler manage arrows/space
+                if (onGallery) return;
+                if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') {
+                    e.preventDefault();
+                    if (Date.now() >= sectionGateUntil) setActive(index + 1);
+                }
+                if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+                    e.preventDefault();
+                    if (Date.now() >= sectionGateUntil) setActive(index - 1);
+                }
+                if (e.key === 'Home') { e.preventDefault(); setActive(0); }
+                if (e.key === 'End') { e.preventDefault(); setActive(slides.length - 1); }
+            });
+
+            const io = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) entry.target.classList.add('active');
+                });
+            }, { rootMargin: '-10% 0px -10% 0px', threshold: 0.2 });
+            slides.forEach(s => io.observe(s));
+
+            let rafPending = false;
+            function updateCurrentIndexOnScroll() {
+                if (rafPending) return;
+                rafPending = true;
+                requestAnimationFrame(() => {
+                    rafPending = false;
+                    const mid = headerHeight() + 40; // consider header offset
+                    let newIndex = index;
+                    for (let i = 0; i < slides.length; i++) {
+                        const r = slides[i].getBoundingClientRect();
+                        if (r.top <= mid && r.bottom >= mid) { newIndex = i; break; }
+                    }
+                    index = newIndex;
+                    // Enhanced page progress with better sync - now handled by modern progress system
+                    updateProgressBar();
+
+                    // Determine if gallery should be active: docked just under header
+                    if (gallerySlide) {
+                        const gap = 12;
+                        const desiredTop = headerHeight() + gap;
+                        const rect = gallerySlide.getBoundingClientRect();
+                        const nearDock = Math.abs(rect.top - desiredTop) < 14; // a bit more tolerant
+                        const inViewport = rect.top < window.innerHeight - 60 && rect.bottom > desiredTop + 20;
+                        // Only activate when the currently-focused slide IS the gallery
+                        const currentIsGallery = slides[index] && slides[index].id === 'screens';
+                        if (currentIsGallery && nearDock && inViewport) {
+                            galleryActive = true;
+                        } else {
+                            // Before docking, keep first images visible and disable horizontal interception
+                            if (rect.top > desiredTop && gallery) { gallery.scrollLeft = 0; }
+                            galleryActive = false;
+                        }
+                    }
+                });
+            }
+            document.addEventListener('scroll', updateCurrentIndexOnScroll, { passive: true });
+            window.addEventListener('resize', updateCurrentIndexOnScroll);
+
+            // Modern Progress Bar System
+            const progressFill = document.getElementById('progressBar');
+            const progressGlow = document.getElementById('progressGlow');
+            const progressPulse = document.getElementById('progressPulse');
+
+            let progressRAF = null;
+            let lastScrollTime = 0;
+            let scrollVelocity = 0;
+            let lastScrollTop = 0;
+
+            function updateProgressBar() {
+                if (progressRAF) return;
+
+                progressRAF = requestAnimationFrame(() => {
+                    const docEl = document.documentElement;
+                    const body = document.body;
+                    const scrollTop = window.pageYOffset || docEl.scrollTop || body.scrollTop || 0;
+                    const scrollHeight = Math.max(docEl.scrollHeight, body.scrollHeight);
+                    const maxScroll = Math.max(1, scrollHeight - window.innerHeight);
+                    const pctPage = Math.min(100, Math.max(0, (scrollTop / maxScroll) * 100));
+
+                    // Calculate scroll velocity for dynamic effects
+                    const currentTime = Date.now();
+                    if (currentTime - lastScrollTime > 0) {
+                        scrollVelocity = Math.abs(scrollTop - lastScrollTop) / (currentTime - lastScrollTime);
+                        lastScrollTime = currentTime;
+                        lastScrollTop = scrollTop;
+                    }
+
+                    // Update progress elements with smooth transitions
+                    if (progressFill) {
+                        progressFill.style.width = pctPage + '%';
+                        progressFill.style.transition = scrollVelocity > 0.5 ? 'width 0.1s ease-out' : 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+                    }
+
+                    if (progressGlow) {
+                        progressGlow.style.width = pctPage + '%';
+                        progressGlow.style.transition = scrollVelocity > 0.5 ? 'width 0.1s ease-out' : 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+                    }
+
+                    if (progressPulse) {
+                        progressPulse.style.width = pctPage + '%';
+                        progressPulse.style.transition = scrollVelocity > 0.5 ? 'width 0.1s ease-out' : 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+                    }
+
+                    progressRAF = null;
+                });
+            }
+
+            // Enhanced scroll listeners with throttling
+            let scrollTimeout = null;
+            function handleScroll() {
+                if (scrollTimeout) return;
+                scrollTimeout = setTimeout(() => {
+                    updateProgressBar();
+                    scrollTimeout = null;
+                }, 16); // ~60fps
+            }
+
+            // Multiple scroll detection methods for better sync
+            window.addEventListener('scroll', handleScroll, { passive: true });
+            document.addEventListener('scroll', handleScroll, { passive: true });
+            window.addEventListener('resize', updateProgressBar);
+
+            // Intersection Observer for section-based progress
+            const sectionObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        updateProgressBar();
+                    }
+                });
+            }, {
+                rootMargin: '-10% 0px -10% 0px',
+                threshold: 0.1
+            });
+
+            // Observe all slides for better progress tracking
+            slides.forEach(slide => sectionObserver.observe(slide));
+
+            // Back to Top Button Functionality
+            const backToTopBtn = document.getElementById('backToTop');
+
+            function toggleBackToTop() {
+                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                const shouldShow = scrollTop > window.innerHeight * 0.8; // Show after less than 1 section
+
+                if (shouldShow) {
+                    backToTopBtn.classList.add('visible');
+                } else {
+                    backToTopBtn.classList.remove('visible');
+                }
+            }
+
+            // Show/hide back to top button based on scroll position
+            window.addEventListener('scroll', toggleBackToTop, { passive: true });
+
+            // Back to top click handler
+            backToTopBtn.addEventListener('click', () => {
+                window.scrollTo({
+                    top: 0,
+                    behavior: 'smooth'
+                });
+            });
+
+            const lb = document.getElementById('lightbox');
+            const lbImg = document.getElementById('lightboxImg');
+            const lbClose = document.getElementById('lightboxClose');
+            document.querySelectorAll('.lightboxable').forEach(img => {
+                img.style.cursor = 'zoom-in';
+                img.addEventListener('click', () => {
+                    lbImg.src = img.src;
+                    const fig = img.closest('figure');
+                    const caption = fig ? fig.getAttribute('data-caption') : '';
+                    lbImg.alt = caption || img.alt || 'Screenshot';
+                    lb.classList.add('open');
+                });
+            });
+            function closeLb() { lb.classList.remove('open'); lbImg.removeAttribute('src'); }
+            lb && lb.addEventListener('click', (e) => { if (e.target === lb) closeLb(); });
+            lbClose && lbClose.addEventListener('click', closeLb);
+            document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeLb(); });
+
+            // On mobile, do not apply section paging or gallery interception
+            if (!isMobile) {
+                // Gallery enhancements: captions below thumbs, vertical wheel maps to horizontal
+                if (gallery) {
+                    const items = Array.from(gallery.querySelectorAll('figure'));
+                    items.forEach(fig => {
+                        const cap = fig.getAttribute('data-caption');
+                        if (cap && !fig.querySelector('.thumb-caption')) {
+                            const p = document.createElement('p');
+                            p.className = 'thumb-caption';
+                            p.textContent = cap;
+                            fig.appendChild(p);
+                        }
+                    });
+
+                    function isGalleryInView() {
+                        const r = gallery.getBoundingClientRect();
+                        const headerH = (document.querySelector('.topbar')?.getBoundingClientRect().height || 0);
+                        const topZone = headerH + 40;
+                        const bottomZone = window.innerHeight - 40;
+                        return r.top < bottomZone && r.bottom > topZone; // overlapping viewport
+                    }
+
+                    function handleWheel(e) {
+                        // If we are approaching the gallery, snap/dock it first
+                        if (!galleryActive) {
+                            if (gallerySlide) {
+                                const gap = 12;
+                                const desiredTop = headerHeight() + gap;
+                                const rect = gallerySlide.getBoundingClientRect();
+                                const movingDown = (e.deltaY || 0) > 0;
+                                const movingUp = (e.deltaY || 0) < 0;
+                                // Entering from above
+                                if (movingDown && rect.top <= desiredTop + 60 && rect.bottom > desiredTop + 120) {
+                                    e.preventDefault();
+                                    dockGalleryAndActivate();
+                                    return;
+                                }
+                                // Entering from below
+                                if (movingUp && rect.top < desiredTop && rect.bottom >= desiredTop + 60) {
+                                    e.preventDefault();
+                                    dockGalleryAndActivate();
+                                    return;
+                                }
+                            }
+                            return; // let page scroll normally until we dock
+                        }
+
+                        // Always intercept while in gallery view
+                        e.preventDefault();
+
+                        // Calculate discrete step by 2 items
+                        const GAP = 16; // matches CSS gap
+                        const firstItem = gallery.querySelector('.hitem');
+                        if (!firstItem) return;
+                        const itemWidth = firstItem.getBoundingClientRect().width + GAP;
+                        const maxIndex = Math.round((gallery.scrollWidth - gallery.clientWidth) / itemWidth);
+                        let currentIndex = Math.round(gallery.scrollLeft / itemWidth);
+
+                        const delta = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+                        const dir = delta > 0 ? 1 : -1;
+
+                        // Require first scroll to arm (holds on the home image)
+                        if (!galleryArmed) {
+                            galleryArmed = true;
+                            return; // do nothing on first scroll while docked
+                        }
+
+                        // Respect 1s gate between gallery steps
+                        if (Date.now() < galleryStepGateUntil) return;
+
+                        // Debounce to avoid rapid repeats on trackpads
+                        if (handleWheel._lock) return;
+
+                        // Handoff detection using tolerance instead of relying on exact index math
+                        const atStartTol = gallery.scrollLeft <= 2;
+                        const atEndTol = gallery.scrollLeft >= (gallery.scrollWidth - gallery.clientWidth - 2);
+                        if (dir > 0 && atEndTol) {
+                            // move to next section - smoother transition
+                            galleryActive = false;
+                            galleryArmed = false;
+                            sectionGateUntil = Date.now() + 600; // Shorter delay for smoother transition
+                            wheelLock = true;
+                            setActive(index + 1);
+                            setTimeout(() => { wheelLock = false; }, 200); // Faster unlock
+                            return;
+                        }
+                        if (dir < 0 && atStartTol) {
+                            // move to previous section - smoother transition
+                            galleryActive = false;
+                            galleryArmed = false;
+                            sectionGateUntil = Date.now() + 600; // Shorter delay for smoother transition
+                            wheelLock = true;
+                            setActive(index - 1);
+                            setTimeout(() => { wheelLock = false; }, 200); // Faster unlock
+                            return;
+                        }
+
+                        let target = currentIndex + (2 * dir);
+                        if (target < 0) {
+                            // Handoff to previous section and disable galleryActive to avoid stutter
+                            galleryActive = false;
+                            galleryArmed = false;
+                            sectionGateUntil = Date.now() + 600; // Shorter delay for smoother transition
+                            setActive(index - 1);
+                            return;
+                        }
+                        if (target > maxIndex) {
+                            // Handoff to next section and disable galleryActive to avoid stutter
+                            galleryActive = false;
+                            galleryArmed = false;
+                            sectionGateUntil = Date.now() + 600; // Shorter delay for smoother transition
+                            setActive(index + 1);
+                            return;
+                        }
+
+                        handleWheel._lock = true;
+                        gallery.classList.add('animating');
+                        smoothScrollToX(gallery, target * itemWidth, 400); // faster animation
+                        // release lock after animation
+                        setTimeout(() => {
+                            handleWheel._lock = false;
+                            gallery.classList.remove('animating');
+                            galleryStepGateUntil = Date.now() + 1000; // gate next step by 1s
+                        }, 450);
+                    }
+                    // Global wheel interceptor while on gallery slide
+                    window.addEventListener('wheel', handleWheel, { passive: false });
+
+                    // Page-level wheel: when not in galleryActive, page by section like Space/Arrow
+                    function handleWheelSections(e) {
+                        if (galleryActive) return; // gallery handler will take it
+
+                        // Only apply snapping if user is in keyboard navigation mode
+                        if (!isKeyboardNavigation) {
+                            // Allow normal smooth scrolling for mouse/trackpad
+                            return;
+                        }
+
+                        // only act when user intent is vertical page scroll
+                        const delta = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : 0;
+                        if (delta === 0) return;
+                        if (wheelLock) return;
+                        if (Date.now() < sectionGateUntil) { e.preventDefault(); return; } // enforce 1s gap up/down
+                        wheelLock = true;
+                        e.preventDefault();
+                        if (delta > 0) setActive(index + 1); else setActive(index - 1);
+                        setTimeout(() => { wheelLock = false; }, 200);
+                    }
+                    window.addEventListener('wheel', handleWheelSections, { passive: false });
+
+                    // Add keyboard event listener
+                    document.addEventListener('keydown', handleKeyboardNavigation);
+
+                    // Detect mouse interaction to reset keyboard navigation mode
+                    function handleMouseInteraction() {
+                        const currentTime = Date.now();
+                        const timeSinceLastKeyboard = currentTime - lastInteractionTime;
+
+                        // If mouse interaction after keyboard, reset to mouse mode
+                        if (timeSinceLastKeyboard > 1000) { // 1 second threshold
+                            isKeyboardNavigation = false;
+                        }
+                    }
+
+                    // Add mouse event listeners
+                    window.addEventListener('mousemove', handleMouseInteraction);
+                    window.addEventListener('wheel', handleMouseInteraction);
+
+                    // Keyboard navigation detection and nearest section snapping
+                    function handleKeyboardNavigation(e) {
+                        const currentTime = Date.now();
+                        const timeSinceLastInteraction = currentTime - lastInteractionTime;
+
+                        // Detect keyboard navigation
+                        if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === ' ' || e.key === 'Home' || e.key === 'End') {
+                            isKeyboardNavigation = true;
+                            lastInteractionTime = currentTime;
+
+                            // If switching from mouse to keyboard, snap to nearest section
+                            if (timeSinceLastInteraction > 1000) { // 1 second threshold
+                                snapToNearestSection();
+                            }
+                        }
+                    }
+
+                    function snapToNearestSection() {
+                        const mid = headerHeight() + 40;
+                        let nearestIndex = index;
+                        let minDistance = Infinity;
+
+                        for (let i = 0; i < slides.length; i++) {
+                            const r = slides[i].getBoundingClientRect();
+                            const distance = Math.abs(r.top - mid);
+                            if (distance < minDistance) {
+                                minDistance = distance;
+                                nearestIndex = i;
+                            }
+                        }
+
+                        if (nearestIndex !== index) {
+                            setActive(nearestIndex);
+                        }
+                    }
+
+                    // Keyboard: within gallery slide, arrows/space page horizontally by viewport width
+                    function pageGallery(dir) {
+                        const GAP = 16; const firstItem = gallery.querySelector('.hitem');
+                        const itemWidth = firstItem ? (firstItem.getBoundingClientRect().width + GAP) : gallery.clientWidth / 3;
+                        const step = itemWidth * 2; // two items per page
+                        const start = gallery.scrollLeft;
+                        gallery.classList.add('animating');
+                        smoothScrollToX(gallery, start + dir * step, 650);
+                        setTimeout(() => { gallery.classList.remove('animating'); }, 680);
+                    }
+
+                    document.addEventListener('keydown', (e) => {
+                        const currentSlide = slides[index];
+                        if (!currentSlide || currentSlide.id !== 'screens') return;
+                        // Require first key press to arm (keep home image visible on arrival)
+                        if (!galleryArmed) { galleryArmed = true; e.preventDefault(); return; }
+                        if (e.key === 'ArrowRight' || e.key === ' ') {
+                            const atEnd = Math.ceil(gallery.scrollLeft + gallery.clientWidth) >= gallery.scrollWidth - 2;
+                            if (!atEnd) { e.preventDefault(); pageGallery(1); } else { setActive(index + 1); }
+                        } else if (e.key === 'ArrowLeft') {
+                            const atStart = gallery.scrollLeft <= 1;
+                            if (!atStart) { e.preventDefault(); pageGallery(-1); } else { setActive(index - 1); }
+                        }
+                    });
+                }
+            } // end !isMobile
+
+            // Animated donut - force 88% always
+            const donut = document.getElementById('donut');
+            if (donut) {
+                const pct = 88; // Always use 88% - ignore any data attributes
+                const radius = 86;
+                const circumference = 2 * Math.PI * radius;
+                const value = document.getElementById('value');
+                const pctText = document.getElementById('donutPct');
+                value.style.transition = 'stroke-dasharray 900ms ease';
+                requestAnimationFrame(() => {
+                    // Calculate 88% of the circumference for the arc
+                    const dashLength = (pct / 100) * circumference;
+                    const gapLength = circumference - dashLength;
+                    value.setAttribute('stroke-dasharray', `${dashLength} ${gapLength}`);
+                    pctText.textContent = '88%';
+                });
+            }
+
+            // Ensure load starts at top
+            window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+            setActive(0);
+            // initial gate
+
+            // Force donut chart to 88% after any animation
+            setInterval(() => {
+                const donut = document.getElementById('donut');
+                const value = document.getElementById('value');
+                const pctText = document.getElementById('donutPct');
+                if (donut && value && pctText) {
+                    const radius = 86;
+                    const circumference = 2 * Math.PI * radius;
+                    const dashLength = (88 / 100) * circumference;
+                    const gapLength = circumference - dashLength;
+                    value.setAttribute('stroke-dasharray', `${dashLength} ${gapLength}`);
+                    pctText.textContent = '88%';
+                }
+            }, 100);
+            sectionGateUntil = Date.now() + 1000;
+            // Ensure initial state evaluates docking
+            updateCurrentIndexOnScroll();
+
+            // Disable keyboard section paging on mobile
+            if (isMobile) {
+                document.addEventListener('keydown', (e) => {
+                    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(e.key)) {
+                        // allow normal scroll; just avoid our custom handlers
+                        return;
+                    }
+                }, { passive: true });
+            }
+        })();
+    </script>
+</body>
+
+</html>
