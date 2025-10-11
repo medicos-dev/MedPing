@@ -5,7 +5,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>MedPing - Smart Medicine Reminder</title>
-    <link rel="icon" type="image/png" sizes="32x32" href="assets/images/appicon.png">
+    <link rel="icon" type="image/png" href="assets/images/appicon.png">
     <link rel="shortcut icon" type="image/png" href="assets/images/appicon.png">
     <link rel="apple-touch-icon" href="assets/images/appicon.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -735,11 +735,11 @@
             }
 
             .slide:has(h2:contains("Developer Credits")) .card img {
-                width: 120px !important;
-                height: 120px !important;
-                border-radius: 12px !important;
+                width: 200px !important;
+                height: auto !important;
+                border-radius: 16px !important;
                 object-fit: cover !important;
-                margin: 0 auto 16px auto;
+                margin: 0 auto 20px auto;
                 order: 1;
             }
 
@@ -768,6 +768,36 @@
                 font-size: 13px;
                 margin: 6px 0;
                 line-height: 1.4;
+            }
+
+            /* Alternative approach for better browser support */
+            .slide .grid.cols-2 .card:first-child {
+                flex-direction: column !important;
+                align-items: center !important;
+                text-align: center !important;
+            }
+
+            .slide .grid.cols-2 .card:first-child img {
+                order: 1 !important;
+                width: 120px !important;
+                height: auto !important;
+                border-radius: 12px !important;
+                object-fit: cover !important;
+                margin: 0 auto 12px auto !important;
+            }
+
+            .slide .grid.cols-2 .card:first-child h3 {
+                order: 2 !important;
+                font-size: 20px !important;
+                margin: 0 0 8px 0 !important;
+                font-weight: 600 !important;
+            }
+
+            .slide .grid.cols-2 .card:first-child p {
+                order: 3 !important;
+                font-size: 14px !important;
+                line-height: 1.5 !important;
+                margin: 4px 0 !important;
             }
         }
 
@@ -1813,4 +1843,3 @@
 </body>
 
 </html>
-
