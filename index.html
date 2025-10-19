@@ -638,7 +638,7 @@
             transition: transform 700ms cubic-bezier(.2, .8, .2, 1);
         }
 
-        .slide.active .bar {
+        .slide.charts-armed .bar {
             transform: scaleY(1);
         }
 
@@ -802,10 +802,7 @@
             }
         }
 
-        /* Force 88% donut chart - override any other values */
-        #donut #value {
-            stroke-dasharray: 475.2 64.8 !important;
-        }
+        /* Donut animation now triggered only when Illustrative Impact is active */
 
         /* Download Section Styles */
         .download-section {
@@ -993,6 +990,7 @@
             }
         }
     </style>
+    <script src="https://unpkg.com/@studio-freight/lenis/dist/lenis.min.js"></script>
 </head>
 
 <body>
@@ -1207,7 +1205,7 @@
                         <circle cx="120" cy="120" r="86" fill="#0f172a" />
                         <circle id="track" cx="120" cy="120" r="86" fill="none" stroke="#1f2937" stroke-width="26" />
                         <circle id="value" cx="120" cy="120" r="86" fill="none" stroke="url(#d1)" stroke-width="26"
-                            stroke-linecap="round" transform="rotate(-90 120 120)" />
+                            stroke-linecap="round" transform="rotate(-90 120 120)" pathLength="100" stroke-dasharray="100" stroke-dashoffset="12" />
                         <text id="donutLabel" x="120" y="114" text-anchor="middle" fill="#e5e7eb" font-size="18">User
                             satisfaction</text>
                         <text id="donutPct" x="120" y="140" text-anchor="middle" fill="#22d3ee" font-size="22"
@@ -1459,6 +1457,39 @@
 
     <script>
         (function () {
+            // Lenis Smooth Scrolling integration
+            let lenis = null;
+            (function initLenis() {
+                try {
+                    // eslint-disable-next-line no-undef
+                    lenis = new Lenis({
+                        duration: 1.05,
+                        smoothWheel: true,
+                        smoothTouch: false,
+                        wheelMultiplier: 1.0
+                    });
+                    function raf(time) {
+                        lenis.raf(time);
+                        requestAnimationFrame(raf);
+                    }
+                    requestAnimationFrame(raf);
+
+                    // Monkey‑patch window.scrollTo for object syntax to route via Lenis
+                    const originalScrollTo = window.scrollTo.bind(window);
+                    window.scrollTo = function () {
+                        try {
+                            if (arguments.length === 1 && typeof arguments[0] === 'object' && arguments[0] !== null) {
+                                const opts = arguments[0];
+                                const top = typeof opts.top === 'number' ? opts.top : window.pageYOffset || 0;
+                                const immediate = opts.behavior === 'auto';
+                                lenis.scrollTo(top, { immediate });
+                                return;
+                            }
+                        } catch (_) { /* fall through to native */ }
+                        return originalScrollTo.apply(window, arguments);
+                    };
+                } catch (_) { /* Lenis not available - no-op */ }
+            })();
             const slides = Array.from(document.querySelectorAll('.slide'));
             let index = 0;
             const progressBar = document.getElementById('progressBar');
@@ -1474,6 +1505,11 @@
             let galleryStepGateUntil = 0; // gate between horizontal steps
             let isKeyboardNavigation = false;
             let lastInteractionTime = 0;
+
+            // Global mouse interaction resets keyboard navigation mode
+            function setMouseMode() { isKeyboardNavigation = false; lastInteractionTime = Date.now(); }
+            window.addEventListener('wheel', setMouseMode, { passive: true });
+            window.addEventListener('mousemove', setMouseMode, { passive: true });
 
             function headerHeight() { return (document.querySelector('.topbar')?.getBoundingClientRect().height || 0); }
             function scrollToSlide(i) {
@@ -1514,25 +1550,39 @@
                 }
             }
 
-            // Smooth horizontal scroll helper
+            // Smooth horizontal scroll helper (Lenis-like easing)
             function smoothScrollToX(el, targetLeft, duration) {
                 const start = el.scrollLeft;
                 const delta = targetLeft - start;
                 const startTime = performance.now();
-                function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+                function easeInOutCubic(t) { return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
                 function step(now) {
                     const p = Math.min(1, (now - startTime) / duration);
-                    el.scrollLeft = start + delta * easeOutCubic(p);
+                    el.scrollLeft = start + delta * easeInOutCubic(p);
                     if (p < 1) requestAnimationFrame(step);
                 }
                 requestAnimationFrame(step);
             }
 
             function clamp(i) { return Math.max(0, Math.min(slides.length - 1, i)); }
+            let suppressScrollOnce = false;
+            function armChartsForSlideIndex(i) {
+                slides.forEach(s => s.classList.remove('charts-armed'));
+                const s = slides[i];
+                if (!s) return;
+                const h2 = s.querySelector('h2');
+                if (h2 && /Illustrative Impact/i.test(h2.textContent || '')) {
+                    s.classList.add('charts-armed');
+                }
+            }
+
             function setActive(i) {
                 index = clamp(i);
                 slides.forEach((s, idx) => s.classList.toggle('active', idx === index));
+                if (!suppressScrollOnce) {
                 scrollToSlide(index);
+                }
+                armChartsForSlideIndex(index);
                 animateCharts(slides[index]);
 
                 // Check if transitioning to/from gallery section for smoother behavior
@@ -1543,26 +1593,44 @@
                 const isFromGallery = prevSlide && prevSlide.id === 'screens';
                 const isToGallery = nextSlide && nextSlide.id === 'screens';
 
-                if (isGallerySection || isFromGallery || isToGallery) {
+                if (!suppressScrollOnce && (isGallerySection || isFromGallery || isToGallery)) {
                     // Smoother transitions for gallery-related sections
                     sectionGateUntil = Date.now() + 600; // Shorter delay
                     wheelLock = true;
                     setTimeout(() => { wheelLock = false; }, 300); // Faster unlock
                 } else {
-                    // Normal timing for other sections
+                    // Normal timing for other sections (or when suppressing scroll, unlock immediately)
+                    if (suppressScrollOnce) {
+                        sectionGateUntil = Date.now();
+                        wheelLock = false;
+                    } else {
                     sectionGateUntil = Date.now() + 1000;
                     wheelLock = true;
                     setTimeout(() => { wheelLock = false; }, 1000);
+                    }
                 }
 
                 // Leaving gallery context on any section change
-                galleryActive = false; galleryArmed = false;
+                setGalleryActiveState(false); galleryArmed = false;
                 // Recompute current index/progress after scroll animation starts
                 setTimeout(updateCurrentIndexOnScroll, 10);
                 // Update progress bar immediately as a fallback
                 setTimeout(() => {
                     updateProgressBar();
                 }, 50);
+                // clear suppression after applying
+                suppressScrollOnce = false;
+            }
+
+            function setGalleryActiveState(active) {
+                // On mobile, never activate the gallery interception to avoid scroll lock
+                if (isMobile) { galleryActive = false; return; }
+                galleryActive = !!active;
+                try {
+                    if (typeof lenis !== 'undefined' && lenis) {
+                        if (galleryActive) lenis.stop(); else lenis.start();
+                    }
+                } catch (_) { }
             }
 
             function dockGalleryAndActivate() {
@@ -1570,38 +1638,26 @@
                 const gap = 12;
                 const desiredTop = gallerySlide.getBoundingClientRect().top + window.pageYOffset - headerHeight() - gap;
                 window.scrollTo({ top: desiredTop, behavior: 'smooth' });
-                galleryActive = true;
+                setGalleryActiveState(true);
                 galleryArmed = false; // require first scroll to arm
-                galleryStepGateUntil = Date.now() + 1000; // small initial gate
+                galleryStepGateUntil = Date.now(); // no initial gate on mouse
             }
 
             function animateCharts(slide) {
                 if (!slide) return;
+                // Only animate when within the Illustrative Impact section
+                const isIllustrative = slide.querySelector('h2') && /Illustrative Impact/i.test(slide.querySelector('h2').textContent || '');
+                if (!isIllustrative) return;
                 const svgs = slide.querySelectorAll('svg');
                 svgs.forEach(svg => {
-                    const paths = svg.querySelectorAll('path, circle');
-                    paths.forEach(p => { p.classList.add('animate-stroke'); });
+                    // Only animate shapes except the donut value ring
+                    const animTargets = svg.querySelectorAll('path, circle:not(#value)');
+                    animTargets.forEach(p => { p.classList.add('animate-stroke'); });
+                    // Ensure donut ring never has the animation class
+                    const donutRing = svg.querySelector('#value');
+                    if (donutRing) donutRing.classList.remove('animate-stroke');
                 });
-
-                // Special handling for donut chart - force 88% always
-                const donut = slide.querySelector('#donut');
-                if (donut) {
-                    const pct = 88; // Always use 88%
-                    const radius = 86;
-                    const circumference = 2 * Math.PI * radius;
-                    const value = donut.querySelector('#value');
-                    const pctText = donut.querySelector('#donutPct');
-                    if (value && pctText) {
-                        value.style.transition = 'stroke-dasharray 900ms ease';
-                        requestAnimationFrame(() => {
-                            // Calculate 88% of the circumference for the arc
-                            const dashLength = (pct / 100) * circumference;
-                            const gapLength = circumference - dashLength;
-                            value.setAttribute('stroke-dasharray', `${dashLength} ${gapLength}`);
-                            pctText.textContent = '88%';
-                        });
-                    }
-                }
+                // Donut is static at 88% now
             }
 
             // Buttons removed
@@ -1669,11 +1725,13 @@
                         if (r.top <= mid && r.bottom >= mid) { newIndex = i; break; }
                     }
                     index = newIndex;
+                    // When index changes due to mouse/scroll, arm charts appropriately
+                    armChartsForSlideIndex(index);
                     // Enhanced page progress with better sync - now handled by modern progress system
                     updateProgressBar();
 
                     // Determine if gallery should be active: docked just under header
-                    if (gallerySlide) {
+                    if (gallerySlide && !isMobile) {
                         const gap = 12;
                         const desiredTop = headerHeight() + gap;
                         const rect = gallerySlide.getBoundingClientRect();
@@ -1682,13 +1740,33 @@
                         // Only activate when the currently-focused slide IS the gallery
                         const currentIsGallery = slides[index] && slides[index].id === 'screens';
                         if (currentIsGallery && nearDock && inViewport) {
-                            galleryActive = true;
+                            setGalleryActiveState(true);
                         } else {
                             // Before docking, keep first images visible and disable horizontal interception
                             if (rect.top > desiredTop && gallery) { gallery.scrollLeft = 0; }
-                            galleryActive = false;
+                            setGalleryActiveState(false);
                         }
                     }
+
+                    // Pre‑arm bar chart slightly before the slide docks (mouse/trackpad only)
+                    try {
+                        if (!isKeyboardNavigation) {
+                            const illustrativeIndex = slides.findIndex(s => {
+                                const h2 = s.querySelector('h2');
+                                return h2 && /Illustrative Impact/i.test(h2.textContent || '');
+                            });
+                            if (illustrativeIndex >= 0) {
+                                const s = slides[illustrativeIndex];
+                                const r = s.getBoundingClientRect();
+                                const threshold = headerHeight() + 180; // start a bit early
+                                const shouldPreArm = r.top <= threshold && r.bottom > headerHeight();
+                                slides.forEach(sl => sl.classList.remove('charts-armed'));
+                                if (shouldPreArm || illustrativeIndex === index) {
+                                    s.classList.add('charts-armed');
+                                }
+                            }
+                        }
+                    } catch (_) { }
                 });
             }
             document.addEventListener('scroll', updateCurrentIndexOnScroll, { passive: true });
@@ -1707,7 +1785,7 @@
             function updateProgressBar() {
                 if (progressRAF) return;
 
-                progressRAF = requestAnimationFrame(() => {
+                const compute = () => {
                     const docEl = document.documentElement;
                     const body = document.body;
                     const scrollTop = window.pageYOffset || docEl.scrollTop || body.scrollTop || 0;
@@ -1740,7 +1818,14 @@
                     }
 
                     progressRAF = null;
-                });
+                };
+
+                if (typeof lenis !== 'undefined' && lenis) {
+                    // Sync with Lenis RAF for buttery updates
+                    progressRAF = requestAnimationFrame(compute);
+                } else {
+                    progressRAF = requestAnimationFrame(compute);
+                }
             }
 
             // Enhanced scroll listeners with throttling
@@ -1809,9 +1894,10 @@
                     const caption = fig ? fig.getAttribute('data-caption') : '';
                     lbImg.alt = caption || img.alt || 'Screenshot';
                     lb.classList.add('open');
+                    try { if (typeof lenis !== 'undefined' && lenis) lenis.stop(); } catch(_){}
                 });
             });
-            function closeLb() { lb.classList.remove('open'); lbImg.removeAttribute('src'); }
+            function closeLb() { lb.classList.remove('open'); lbImg.removeAttribute('src'); try { if (typeof lenis !== 'undefined' && lenis) lenis.start(); } catch(_){} }
             lb && lb.addEventListener('click', (e) => { if (e.target === lb) closeLb(); });
             lbClose && lbClose.addEventListener('click', closeLb);
             document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeLb(); });
@@ -1840,6 +1926,7 @@
                     }
 
                     function handleWheel(e) {
+                        if (handleWheel._suppress) return;
                         // If we are approaching the gallery, snap/dock it first
                         if (!galleryActive) {
                             if (gallerySlide) {
@@ -1884,8 +1971,7 @@
                             return; // do nothing on first scroll while docked
                         }
 
-                        // Respect 1s gate between gallery steps
-                        if (Date.now() < galleryStepGateUntil) return;
+                        // Disable 1s gate for mouse horizontal steps
 
                         // Debounce to avoid rapid repeats on trackpads
                         if (handleWheel._lock) return;
@@ -1894,18 +1980,29 @@
                         const atStartTol = gallery.scrollLeft <= 2;
                         const atEndTol = gallery.scrollLeft >= (gallery.scrollWidth - gallery.clientWidth - 2);
                         if (dir > 0 && atEndTol) {
-                            // move to next section - smoother transition
-                            galleryActive = false;
+                            // move to next section with immediate smooth jump
+                            setGalleryActiveState(false);
                             galleryArmed = false;
-                            sectionGateUntil = Date.now() + 600; // Shorter delay for smoother transition
-                            wheelLock = true;
+                            sectionGateUntil = Date.now();
+                            wheelLock = false;
+                            handleWheel._suppress = true; setTimeout(() => { handleWheel._suppress = false; }, 220);
+                            const nextSlide = slides[index + 1];
+                            if (nextSlide) {
+                                const gap = 12;
+                                const top = nextSlide.getBoundingClientRect().top + window.pageYOffset - headerHeight() - gap;
+                                try { if (typeof lenis !== 'undefined' && lenis) lenis.scrollTo(top); else window.scrollTo({ top, behavior: 'smooth' }); } catch(_) { window.scrollTo({ top, behavior: 'smooth' }); }
+                                // update active index after initiating scroll
+                                setTimeout(() => { suppressScrollOnce = true; setActive(index + 1); sectionGateUntil = Date.now(); wheelLock = false; }, 30);
+                            } else {
                             setActive(index + 1);
-                            setTimeout(() => { wheelLock = false; }, 200); // Faster unlock
+                                sectionGateUntil = Date.now();
+                                wheelLock = false;
+                            }
                             return;
                         }
                         if (dir < 0 && atStartTol) {
                             // move to previous section - smoother transition
-                            galleryActive = false;
+                            setGalleryActiveState(false);
                             galleryArmed = false;
                             sectionGateUntil = Date.now() + 600; // Shorter delay for smoother transition
                             wheelLock = true;
@@ -1917,24 +2014,35 @@
                         let target = currentIndex + (2 * dir);
                         if (target < 0) {
                             // Handoff to previous section and disable galleryActive to avoid stutter
-                            galleryActive = false;
+                            setGalleryActiveState(false);
                             galleryArmed = false;
                             sectionGateUntil = Date.now() + 600; // Shorter delay for smoother transition
                             setActive(index - 1);
                             return;
                         }
                         if (target > maxIndex) {
-                            // Handoff to next section and disable galleryActive to avoid stutter
-                            galleryActive = false;
+                            // Handoff to next section with immediate smooth jump
+                            setGalleryActiveState(false);
                             galleryArmed = false;
-                            sectionGateUntil = Date.now() + 600; // Shorter delay for smoother transition
+                            sectionGateUntil = Date.now();
+                            handleWheel._suppress = true; setTimeout(() => { handleWheel._suppress = false; }, 220);
+                            const nextSlide = slides[index + 1];
+                            if (nextSlide) {
+                                const gap = 12;
+                                const top = nextSlide.getBoundingClientRect().top + window.pageYOffset - headerHeight() - gap;
+                                try { if (typeof lenis !== 'undefined' && lenis) lenis.scrollTo(top); else window.scrollTo({ top, behavior: 'smooth' }); } catch(_) { window.scrollTo({ top, behavior: 'smooth' }); }
+                                setTimeout(() => { suppressScrollOnce = true; setActive(index + 1); sectionGateUntil = Date.now(); wheelLock = false; }, 30);
+                            } else {
                             setActive(index + 1);
+                                sectionGateUntil = Date.now();
+                                wheelLock = false;
+                            }
                             return;
                         }
 
                         handleWheel._lock = true;
                         gallery.classList.add('animating');
-                        smoothScrollToX(gallery, target * itemWidth, 400); // faster animation
+                        smoothScrollToX(gallery, target * itemWidth, 650); // smoother animation
                         // release lock after animation
                         setTimeout(() => {
                             handleWheel._lock = false;
@@ -2028,7 +2136,7 @@
                         const step = itemWidth * 2; // two items per page
                         const start = gallery.scrollLeft;
                         gallery.classList.add('animating');
-                        smoothScrollToX(gallery, start + dir * step, 650);
+                        smoothScrollToX(gallery, start + dir * step, 700);
                         setTimeout(() => { gallery.classList.remove('animating'); }, 680);
                     }
 
@@ -2039,52 +2147,55 @@
                         if (!galleryArmed) { galleryArmed = true; e.preventDefault(); return; }
                         if (e.key === 'ArrowRight' || e.key === ' ') {
                             const atEnd = Math.ceil(gallery.scrollLeft + gallery.clientWidth) >= gallery.scrollWidth - 2;
-                            if (!atEnd) { e.preventDefault(); pageGallery(1); } else { setActive(index + 1); }
+                            if (!atEnd) {
+                                e.preventDefault();
+                                pageGallery(1);
+                            } else {
+                                // Handoff to next section smoothly and avoid gate/lock getting stuck
+                                e.preventDefault();
+                                setGalleryActiveState(false);
+                                galleryArmed = false;
+                                sectionGateUntil = Date.now();
+                                const nextSlide = slides[index + 1];
+                                if (nextSlide) {
+                                    const gap = 12;
+                                    const top = nextSlide.getBoundingClientRect().top + window.pageYOffset - headerHeight() - gap;
+                                    try { if (typeof lenis !== 'undefined' && lenis) lenis.scrollTo(top); else window.scrollTo({ top, behavior: 'smooth' }); } catch(_) { window.scrollTo({ top, behavior: 'smooth' }); }
+                                }
+                                // Update active after initiating scroll and ensure no lock remains
+                                setTimeout(() => { setActive(index + 1); sectionGateUntil = Date.now(); wheelLock = false; }, 80);
+                            }
                         } else if (e.key === 'ArrowLeft') {
                             const atStart = gallery.scrollLeft <= 1;
-                            if (!atStart) { e.preventDefault(); pageGallery(-1); } else { setActive(index - 1); }
+                            if (!atStart) {
+                                e.preventDefault();
+                                pageGallery(-1);
+                            } else {
+                                // Handoff to previous section smoothly and avoid gate/lock getting stuck
+                                e.preventDefault();
+                                setGalleryActiveState(false);
+                                galleryArmed = false;
+                                sectionGateUntil = Date.now();
+                                const prevSlide = slides[index - 1];
+                                if (prevSlide) {
+                                    const gap = 12;
+                                    const top = prevSlide.getBoundingClientRect().top + window.pageYOffset - headerHeight() - gap;
+                                    try { if (typeof lenis !== 'undefined' && lenis) lenis.scrollTo(top); else window.scrollTo({ top, behavior: 'smooth' }); } catch(_) { window.scrollTo({ top, behavior: 'smooth' }); }
+                                }
+                                setTimeout(() => { setActive(index - 1); sectionGateUntil = Date.now(); wheelLock = false; }, 80);
+                            }
                         }
                     });
                 }
             } // end !isMobile
 
-            // Animated donut - force 88% always
-            const donut = document.getElementById('donut');
-            if (donut) {
-                const pct = 88; // Always use 88% - ignore any data attributes
-                const radius = 86;
-                const circumference = 2 * Math.PI * radius;
-                const value = document.getElementById('value');
-                const pctText = document.getElementById('donutPct');
-                value.style.transition = 'stroke-dasharray 900ms ease';
-                requestAnimationFrame(() => {
-                    // Calculate 88% of the circumference for the arc
-                    const dashLength = (pct / 100) * circumference;
-                    const gapLength = circumference - dashLength;
-                    value.setAttribute('stroke-dasharray', `${dashLength} ${gapLength}`);
-                    pctText.textContent = '88%';
-                });
-            }
+            // Donut animation now handled when "Illustrative Impact" activates (in animateCharts)
 
             // Ensure load starts at top
             window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
             setActive(0);
             // initial gate
 
-            // Force donut chart to 88% after any animation
-            setInterval(() => {
-                const donut = document.getElementById('donut');
-                const value = document.getElementById('value');
-                const pctText = document.getElementById('donutPct');
-                if (donut && value && pctText) {
-                    const radius = 86;
-                    const circumference = 2 * Math.PI * radius;
-                    const dashLength = (88 / 100) * circumference;
-                    const gapLength = circumference - dashLength;
-                    value.setAttribute('stroke-dasharray', `${dashLength} ${gapLength}`);
-                    pctText.textContent = '88%';
-                }
-            }, 100);
             sectionGateUntil = Date.now() + 1000;
             // Ensure initial state evaluates docking
             updateCurrentIndexOnScroll();
